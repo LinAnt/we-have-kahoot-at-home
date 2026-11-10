@@ -7,6 +7,11 @@ export function readQuestions(source) {
     const fail = message => { throw new Error(`Question ${i + 1}: ${message}`); };
     if (!q || !q.text || q.answer == null) fail('text and answer are required.');
     if (q.type && !['text', 'multi-answer', 'multiple-choice'].includes(q.type)) fail('unsupported type.');
+    let image = null;
+    if (q.image != null) {
+      if (typeof q.image !== 'string' || !/^\/?assets\/(?:[^/\\?#%\x00-\x1f]+\/)*[^/\\?#%\x00-\x1f]+\.(?:png|jpe?g|gif|webp|avif|svg)$/i.test(q.image) || q.image.split('/').some(part => part === '.' || part === '..')) fail('image must be an image path inside assets, such as assets/example.png.');
+      image = `/${q.image.replace(/^\//, '')}`;
+    }
     let options = null;
     if (q.options != null) {
       if (typeof q.options !== 'object' || Array.isArray(q.options)) fail('options must map letters to answers.');
@@ -16,7 +21,7 @@ export function readQuestions(source) {
     }
     const duration = Number(q.duration ?? 30);
     if (!Number.isInteger(duration) || duration < 5 || duration > 300) fail('duration must be 5–300 seconds.');
-    return { title: String(q.title || `Question ${i + 1}`), text: String(q.text), options, answer: options ? String(q.answer).toUpperCase() : String(q.answer), duration };
+    return { title: String(q.title || `Question ${i + 1}`), text: String(q.text), image, options, answer: options ? String(q.answer).toUpperCase() : String(q.answer), duration };
   });
 }
 export const token = () => randomBytes(24).toString('hex');
@@ -65,7 +70,7 @@ export class Game {
     const revealed = ['reveal','finished'].includes(this.phase);
     const me = this.players.get(id);
     return { code:this.code, phase:this.phase, index:this.index, total:this.questions.length, deadline:this.deadline,
-      question: q ? {title:q.title,text:q.text,options:q.options,duration:q.duration,...(revealed || host ? {answer:q.answer} : {})} : null,
+      question: q ? {title:q.title,text:q.text,image:q.image,options:q.options,duration:q.duration,...(revealed || host ? {answer:q.answer} : {})} : null,
       answered:[...this.players.values()].filter(p=>p.answer !== null).length,
       players:[...this.players.values()].map(p=>({name:p.name,score:p.score})).sort((a,b)=>b.score-a.score),
       me:me ? {name:me.name,score:me.score,submitted:me.answer !== null,...(revealed ? {answer:me.answer,points:me.points} : {})} : null };

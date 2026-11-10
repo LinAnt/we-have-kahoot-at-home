@@ -21,7 +21,7 @@ No cloud services or accounts are required. Typography optionally loads from Goo
 docker compose up --build -d
 ```
 
-The supplied question file is mounted read-only. Changes apply to newly created rooms.
+The supplied question file and `assets` folder are mounted read-only. Changes to questions apply to newly created rooms.
 
 ## Questions
 
@@ -31,6 +31,7 @@ The default file is `questions.yaml`. A host may instead upload a YAML file when
 - title: "3 tablespoons and one gabelspoon plz"
   type: text
   text: "How large is the biggest recorded DDos attack?"
+  image: assets/network.png # Optional; place the file in the assets folder
   options:
     A: "~18 gbps"
     B: "~140 tbps"
@@ -46,6 +47,8 @@ The default file is `questions.yaml`. A host may instead upload a YAML file when
 ```
 
 Presence of `options` selects multiple choice, regardless of `type`. Supported types are `text`, `multi-answer`, and `multiple-choice`; all choice questions accept one option. Option keys are normalized to uppercase. Free-text answers ignore case, surrounding whitespace, and repeated whitespace. `duration` is optional, defaults to 30 seconds, and accepts 5–300 seconds.
+
+Each question may include an optional `image` path, such as `assets/network.png` (or `/assets/network.png`). Store image files in the project's `assets` folder; subfolders are supported. PNG, JPEG, GIF, WebP, AVIF, and SVG images are supported. Images appear below the question for hosts, players, and the big screen, including during answer reveal. Omit `image` for questions without a picture. Uploaded YAML uses the same server-side assets folder; uploading YAML does not upload images.
 
 Each player answers once per question. Correct answers earn 500–1,000 points depending on response time. Rounds reveal when everyone answers, the timer expires, or the host clicks Reveal. Scores and correct answers stay hidden until reveal. The host advances rounds manually, allowing time to discuss results and standings.
 

@@ -1,6 +1,6 @@
 import http from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
+import { readFile, realpath } from 'node:fs/promises';
+import { resolve, dirname, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Game, readQuestions } from './game.js';
 const root = dirname(fileURLToPath(import.meta.url));
@@ -40,6 +40,18 @@ const server = http.createServer(async (req,res) => {
         if(url.pathname === '/api/next') game.next(); else game.reveal();
       } else return send(res,404,{error:'Unknown action.'});
       broadcast(game); return send(res,200,result);
+    }
+    if (req.method === 'GET' && url.pathname.startsWith('/assets/')) {
+      const types = {'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.webp':'image/webp','.avif':'image/avif','.svg':'image/svg+xml'};
+      try {
+        const assets = await realpath(resolve(root, 'assets'));
+        const file = await realpath(resolve(root, `.${decodeURIComponent(url.pathname)}`));
+        const type = types[extname(file).toLowerCase()];
+        if (!file.startsWith(`${assets}${sep}`) || !type) return send(res,404,{error:'Not found.'});
+        const data = await readFile(file);
+        res.setHeader('Content-Type',type);
+        res.end(data); return;
+      } catch { return send(res,404,{error:'Not found.'}); }
     }
     const files = {'/':'index.html','/host':'index.html','/play':'index.html','/screen':'index.html','/app.js':'app.js','/style.css':'style.css'};
     if(req.method !== 'GET' || !files[url.pathname]) return send(res,404,{error:'Not found.'});

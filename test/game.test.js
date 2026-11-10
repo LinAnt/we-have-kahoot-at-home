@@ -26,3 +26,19 @@ test('free text normalization and expired deadlines',()=>{
 test('invalid YAML and invalid options are rejected',()=>{
  for(const input of ['{}','[]','- text: Missing answer','- text: Invalid\n  answer: Z\n  options:\n    A: one\n    B: two','- text: Duration\n  answer: ok\n  duration: -1']) assert.throws(()=>readQuestions(input));
 });
+test('optional images are normalized and shared with every view through reveal',()=>{
+ for (const path of ['assets/photo.png', '/assets/round one/photo.JPG']) {
+  const game=new Game(readQuestions(`- text: Identify this\n  answer: Cat\n  image: ${path}`));
+  const player=game.join('Player');game.next();
+  for (const [id, host] of [[player,false],[null,true],[null,false]]) {
+   assert.equal(game.state(id,host).question.image,`/${path.replace(/^\//,'')}`);
+  }
+  game.reveal();assert.equal(game.state(player).question.image,`/${path.replace(/^\//,'')}`);
+ }
+ assert.equal(readQuestions(source)[0].image,null);
+});
+test('image paths must point to supported images inside assets',()=>{
+ for (const image of ['https://example.com/a.png','photo.png','assets/../photo.png','assets/nested/../../photo.png','assets/a.js','assets/a.png?x=1','assets/%2e%2e/a.png','assets/./a.png',42,'']) {
+  assert.throws(()=>readQuestions(`- text: Image\n  answer: ok\n  image: ${JSON.stringify(image)}`),/image must/);
+ }
+});
