@@ -1,0 +1,128 @@
+- title: Linux serbers
+  text: What service is usually listening on port 123/UDP
+  options:
+    A: "NTP"
+    B: "DNS"
+    C: "SFTPd"
+    D: "mDNS"
+  answer: A
+- title: ProTec the cHilDREn
+  text: How long is Chat Control 1.0 in effect?
+  options:
+    A: "Not in effect ˆ(ㄏ•́ ꞈ •̀)ˆㄏ"
+    B: "April, 2028"
+    C: "May, 2029"
+    D: "14th December 2027"
+  answer: B
+- title: Best hacker cruise 2026
+  text: "How many cabins have been booked for Disaray 2026? :boat:"
+  options:
+    A: "34"
+    B: "47"
+    C: "52"
+    D: "64"
+  answer: B
+- title: Back to basics
+  text: "How many bits is the TTL field in a standard IPv4 packet?"
+  options:
+    A: "8"
+    B: "16"
+    C: "32"
+    d: "64"
+  answer: A
+- title: No more cheap electricity for you
+  text: "How many datacenter projects have been announced in Finland?"
+  options:
+    A: "94"
+    B: "45"
+    C: "145"
+    D: "198"
+  answer: A
+- title: Objectively the best operating system
+  text: "What year did the development off Linux start"
+  options:
+    A: "1997"
+    B: "1995"
+    C: "1993"
+    D: "1991"
+  answer: "D"
+- title: Quality slop
+  text: "How many vulns have M$ patched in their operating systems this month?"
+  options:
+    A: "1 286"
+    B: "1 413"
+    C: "1 893"
+  answer: B
+- title: We have DefCon at home!
+  text: "How many Chaos Communicaton Congresses have been arranged so far?"
+  options:
+    A: "38"
+    B: "39"
+    C: "40"
+  answer: B
+- title: CitySec!
+  text: "How many active City Secs have hosted events this year?"
+  options:
+    A: "4"
+    B: "6"
+    C: "8"
+  answer: C
+- title: "RIP legacy infra ppl"
+  text: "In 2029, browsers will only trust certs with a maximum validity period of:"
+  options:
+    A: "47 days"
+    B: "30 days"
+    C: "100 days"
+    D: "90 days"
+  answer: A
+- title: I code in wordpad
+  text: |
+    let fizz_buzz n =
+    if n mod 5 == 0 && n mod 3 == 0 then print_string "FizzBuzz\n"
+    else if n mod 5 == 0 then print_string "Buzz\n"
+    else if n mod 3 == 0 then print_string "Fizz\n"p
+    else print_string ((string_of_int n) ^ "\n")
+    ;;
+    for i = 1 to 100
+    do
+    fizz_buzz i
+    done
+    ;;
+  options:
+    A: "Looks like Yaml to me"
+    B: "python 2.6"
+    C: "JS"
+    D: "ocaml"
+  answer: D
+- title: I'm a simpe man, if I get a link, I click a link! ヽ༼ ツ ༽ﾉ
+  text: "How many breaches happen because people get phished?"
+  options:
+    A: "8%"
+    B: "34%"
+    C: "16%"
+    D: "23%"
+  answer: C
+- title: It's all JSON anyways
+  text: "YAML is an abbreviation of:"
+  options:
+    A: "Yet Another Markup Language"
+    B: "YAML Ain't Markup Language"
+    C: "Your Automated Management Layer"
+    D: "Yet Another Metadata Language"
+  answer: "B"
+- title: Shamil is the oldest young guy out there!
+  text: "What date was the first TurkuSec organized?"
+  options:
+    A: "3rd of April 2016"
+    B: "4th of February 2017"
+    C: "23th of May 2016"
+    D: "10th of April 2017"
+  answer: C
+- title: "3 tablespoons and one gabelspoon plz"
+  text: "How large is the biggest recorded DDos attack?"
+  options:
+    A: "~18 gbps"
+    B: "~140 tbps"
+    C: "~31 tbps"
+    D: "~180 gbps"
+  answer: C
