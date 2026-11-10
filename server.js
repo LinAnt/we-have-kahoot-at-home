@@ -28,6 +28,7 @@ const server = http.createServer(async (req,res) => {
         if(rooms.size >= 100) return send(res,429,{error:'Room limit reached. Restart the server to clear old rooms.'});
         const questions = readQuestions(body.yaml || await readFile(resolve(process.env.QUESTIONS_FILE || resolve(root,'questions.yaml')),'utf8'));
         let game; do { game = new Game(questions); } while(rooms.has(game.code));
+        game.setTheme(body.theme ?? 'default');
         rooms.set(game.code,game); return send(res,200,{code:game.code,hostToken:game.hostToken});
       }
       const game = rooms.get(String(body.code));
@@ -35,9 +36,10 @@ const server = http.createServer(async (req,res) => {
       let result = {};
       if(url.pathname === '/api/join') result = {playerToken:game.join(body.name)};
       else if(url.pathname === '/api/answer') game.answer(body.playerToken,body.answer);
-      else if(['/api/next','/api/reveal'].includes(url.pathname)) {
+      else if(['/api/next','/api/reveal','/api/theme'].includes(url.pathname)) {
         if(body.hostToken !== game.hostToken) return send(res,403,{error:'Host access required.'});
-        if(url.pathname === '/api/next') game.next(); else game.reveal();
+        if(url.pathname === '/api/theme') game.setTheme(body.theme);
+        else if(url.pathname === '/api/next') game.next(); else game.reveal();
       } else return send(res,404,{error:'Unknown action.'});
       broadcast(game); return send(res,200,result);
     }
@@ -53,7 +55,7 @@ const server = http.createServer(async (req,res) => {
         res.end(data); return;
       } catch { return send(res,404,{error:'Not found.'}); }
     }
-    const files = {'/':'index.html','/host':'index.html','/play':'index.html','/screen':'index.html','/app.js':'app.js','/style.css':'style.css'};
+    const files = {'/':'index.html','/host':'index.html','/play':'index.html','/screen':'index.html','/app.js':'app.js','/themes.js':'themes.js','/style.css':'style.css'};
     if(req.method !== 'GET' || !files[url.pathname]) return send(res,404,{error:'Not found.'});
     res.setHeader('Content-Type',url.pathname.endsWith('.js')?'text/javascript':url.pathname.endsWith('.css')?'text/css':'text/html');
     res.end(await readFile(resolve(root,'public',files[url.pathname])));

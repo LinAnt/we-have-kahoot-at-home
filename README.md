@@ -23,6 +23,10 @@ docker compose up --build -d
 
 The supplied question file and `assets` folder are mounted read-only. Changes to questions apply to newly created rooms.
 
+## Themes
+
+Hosts can select Default or Christmas when creating a room, and change the theme in the lobby before starting. The selection is shared live with all players and the big screen, including after reconnecting. Default preserves the original appearance; Christmas adds an evergreen background, festive colors, and a subtle snow pattern.
+
 ## Questions
 
 The default file is `questions.yaml`. A host may instead upload a YAML file when creating a room.

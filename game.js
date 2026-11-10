@@ -1,5 +1,6 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { parse } from 'yaml';
+import { themes } from './public/themes.js';
 export function readQuestions(source) {
   const rows = parse(source);
   if (!Array.isArray(rows) || !rows.length) throw new Error('Provide a nonempty YAML list of questions.');
@@ -29,7 +30,13 @@ const normalize = value => String(value).normalize('NFKC').trim().replace(/\s+/g
 export class Game {
   constructor(questions, code = String(randomInt(100000,1000000))) {
     this.code = code; this.hostToken = token(); this.questions = questions;
+    this.theme = 'default';
     this.players = new Map(); this.phase = 'lobby'; this.index = -1; this.deadline = null;
+  }
+  setTheme(theme) {
+    if (!Object.hasOwn(themes, theme)) throw new Error('Choose a valid theme.');
+    if (this.phase !== 'lobby') throw new Error('Choose a theme before starting the game.');
+    this.theme = theme;
   }
   join(name) {
     name = String(name || '').trim().slice(0,30);
@@ -45,7 +52,15 @@ export class Game {
     this.index++;
     if (this.index >= this.questions.length) { this.phase = 'finished'; this.deadline = null; return; }
     this.phase = 'question'; this.deadline = Date.now() + this.questions[this.index].duration * 1000;
-    for (const p of this.players.values()) { p.answer = null; p.points = 0; }
+    for (const p of this.players.values()) {
+      p.answer = null; p.points = 0;
+      p.optionKeys = this.questions[this.index].options ? Object.keys(this.questions[this.index].options) : null;
+      // Shuffle once per player and round, so reconnects keep the same choices.
+      if (p.optionKeys) for (let i = p.optionKeys.length - 1; i > 0; i--) {
+        const j = randomInt(i + 1);
+        [p.optionKeys[i], p.optionKeys[j]] = [p.optionKeys[j], p.optionKeys[i]];
+      }
+    }
   }
   answer(id, value) {
     const p = this.players.get(id);
@@ -54,7 +69,12 @@ export class Game {
     if (p.answer !== null) throw new Error('You already answered.');
     const q = this.questions[this.index];
     value = String(value ?? '').trim().slice(0,500);
-    if (!value || (q.options && !(Object.hasOwn(q.options, value)))) throw new Error('Choose a valid answer.');
+    if (q.options) {
+      const index = 'ABCDEFGH'.indexOf(value);
+      if (value.length !== 1 || index < 0 || index >= p.optionKeys.length) throw new Error('Choose a valid answer.');
+      value = p.optionKeys[index];
+    }
+    if (!value) throw new Error('Choose a valid answer.');
     p.answer = value;
     p.points = normalize(value) === normalize(q.answer) ? 500 + Math.round(500 * Math.max(0,(this.deadline-Date.now())/(q.duration*1000))) : 0;
     // Scores are applied only on reveal, so players cannot infer the correct answer early.
@@ -69,10 +89,14 @@ export class Game {
     const q = this.questions[this.index];
     const revealed = ['reveal','finished'].includes(this.phase);
     const me = this.players.get(id);
-    return { code:this.code, phase:this.phase, index:this.index, total:this.questions.length, deadline:this.deadline,
-      question: q ? {title:q.title,text:q.text,image:q.image,options:q.options,duration:q.duration,...(revealed || host ? {answer:q.answer} : {})} : null,
+    const optionKeys = !host && me?.optionKeys;
+    const displayAnswer = value => optionKeys && value !== null ? 'ABCDEFGH'[optionKeys.indexOf(value)] : value;
+    const options = q?.options && optionKeys
+      ? Object.fromEntries(optionKeys.map((key, i) => ['ABCDEFGH'[i], q.options[key]])) : q?.options;
+    return { code:this.code, theme:this.theme, phase:this.phase, index:this.index, total:this.questions.length, deadline:this.deadline,
+      question: q ? {title:q.title,text:q.text,image:q.image,options,duration:q.duration,...(revealed || host ? {answer:displayAnswer(q.answer)} : {})} : null,
       answered:[...this.players.values()].filter(p=>p.answer !== null).length,
       players:[...this.players.values()].map(p=>({name:p.name,score:p.score})).sort((a,b)=>b.score-a.score),
-      me:me ? {name:me.name,score:me.score,submitted:me.answer !== null,...(revealed ? {answer:me.answer,points:me.points} : {})} : null };
+      me:me ? {name:me.name,score:me.score,submitted:me.answer !== null,...(revealed ? {answer:displayAnswer(me.answer),points:me.points} : {})} : null };
   }
 }

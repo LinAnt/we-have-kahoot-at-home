@@ -12,8 +12,9 @@ test('choice game keeps answers and scores secret until reveal, scores once, and
  assert.throws(()=>game.join(' alice '),/taken/);game.next();
  assert.throws(()=>game.join('Late'),/started/);
  assert.equal(game.state(a).question.answer,undefined);assert.equal(game.state(null,true).question.answer,'A');
- game.answer(a,'A');assert.equal(game.state(a).players[0].score,0);assert.equal(game.state(a).me.points,undefined);
- assert.throws(()=>game.answer(a,'B'),/already/);game.answer(b,'B');
+ const choice = (id, text) => Object.entries(game.state(id).question.options).find(([, value]) => value === text)[0];
+ game.answer(a,choice(a,'Yes'));assert.equal(game.state(a).players[0].score,0);assert.equal(game.state(a).me.points,undefined);
+ assert.throws(()=>game.answer(a,'B'),/already/);game.answer(b,choice(b,'No'));
  assert.equal(game.phase,'reveal');assert.ok(game.players.get(a).score>=500);assert.equal(game.players.get(b).score,0);
  assert.throws(()=>game.reveal(),/active/);game.next();assert.equal(game.phase,'finished');
 });
@@ -22,6 +23,34 @@ test('free text normalization and expired deadlines',()=>{
  const p=game.join('Player');game.next();game.answer(p,'  HELLO   world ');assert.ok(game.players.get(p).score>=500);
  const late=new Game(readQuestions(source));const id=late.join('Late');late.next();late.deadline=Date.now()-1;
  assert.throws(()=>late.answer(id,'A'),/closed/);late.reveal();assert.equal(late.players.get(id).score,0);
+});
+test('player choices stay stable and translate local letters for scoring and reveal',()=>{
+ const questions=readQuestions(source);
+ const game=new Game([...questions,...questions]);
+ const a=game.join('Alice'), b=game.join('Bob');game.next();
+ assert.notEqual(game.players.get(a).optionKeys,game.players.get(b).optionKeys);
+ for (const id of [a,b]) {
+  assert.deepEqual([...game.players.get(id).optionKeys].sort(),['A','B']);
+  assert.deepEqual(game.state(id).question.options,game.state(id).question.options);
+ }
+ // Exercise different permutations deterministically, regardless of random output.
+ game.players.get(a).optionKeys=['B','A'];game.players.get(b).optionKeys=['A','B'];
+ assert.deepEqual(game.state(a).question.options,{A:'No',B:'Yes'});
+ assert.deepEqual(game.state(b).question.options,{A:'Yes',B:'No'});
+ assert.deepEqual(game.state(null).question.options,questions[0].options);
+ assert.deepEqual(game.state(null,true).question.options,questions[0].options);
+ assert.equal(game.state(a).question.answer,undefined);
+ assert.throws(()=>game.answer(a,'AB'),/valid/);
+ assert.throws(()=>game.answer(a,'C'),/valid/);
+ game.answer(a,'B');game.answer(b,'B');
+ assert.ok(game.state(a).me.points>=500);assert.equal(game.state(b).me.points,0);
+ assert.equal(game.state(a).question.answer,'B');assert.equal(game.state(b).question.answer,'A');
+ assert.equal(game.state(a).me.answer,'B');assert.equal(game.state(b).me.answer,'B');
+ assert.deepEqual(game.state(a).question.options,{A:'No',B:'Yes'});
+ assert.deepEqual(questions[0].options,{A:'Yes',B:'No'});
+ const previous=game.players.get(a).optionKeys;game.next();
+ assert.notEqual(game.players.get(a).optionKeys,previous);
+ assert.equal(game.state(a).me.submitted,false);
 });
 test('invalid YAML and invalid options are rejected',()=>{
  for(const input of ['{}','[]','- text: Missing answer','- text: Invalid\n  answer: Z\n  options:\n    A: one\n    B: two','- text: Duration\n  answer: ok\n  duration: -1']) assert.throws(()=>readQuestions(input));
