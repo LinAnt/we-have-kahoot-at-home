@@ -3,22 +3,35 @@ import { readFile, realpath } from 'node:fs/promises';
 import { resolve, dirname, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Game, readQuestions } from './game.js';
+import QRCode from 'qrcode';
+import { joinLink } from './join-link.js';
+const publicUrl = process.env.PUBLIC_URL;
+joinLink(publicUrl, '000000'); // Validate configured URLs before accepting connections.
 const root = dirname(fileURLToPath(import.meta.url));
 const rooms = new Map();
 const clients = new Set();
-const broadcast = game => { for (const c of clients) if(c.code === game.code) c.res.write(`data: ${JSON.stringify(game.state(c.player,c.host))}\n\n`); };
+const viewState = (game, player, host) => ({...game.state(player, host), joinUrl: game.phase === 'lobby' ? joinLink(publicUrl, game.code) : null});
+const broadcast = game => { for (const c of clients) if(c.code === game.code) c.res.write(`data: ${JSON.stringify(viewState(game,c.player,c.host))}\n\n`); };
 const send = (res,status,data) => { res.writeHead(status,{'Content-Type':'application/json'}); res.end(JSON.stringify(data)); };
 const server = http.createServer(async (req,res) => {
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Referrer-Policy','no-referrer');
   try {
     const url = new URL(req.url,'http://localhost');
+    if (req.method === 'GET' && url.pathname === '/api/join-qr') {
+      const game = rooms.get(url.searchParams.get('code'));
+      const link = game?.phase === 'lobby' && joinLink(publicUrl, game.code);
+      if (!link) return send(res,404,{error:'Join QR code unavailable.'});
+      const svg = await QRCode.toString(link,{type:'svg',errorCorrectionLevel:'M',margin:4});
+      res.writeHead(200,{'Content-Type':'image/svg+xml','Cache-Control':'no-store'});
+      return res.end(svg);
+    }
     if (url.pathname === '/events') {
       const game = rooms.get(url.searchParams.get('code'));
       if (!game) return send(res,404,{error:'Room not found.'});
       const c = {res,code:game.code,player:url.searchParams.get('player'),host:url.searchParams.get('host') === game.hostToken};
       res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'});
-      clients.add(c); res.write(`data: ${JSON.stringify(game.state(c.player,c.host))}\n\n`);
+      clients.add(c); res.write(`data: ${JSON.stringify(viewState(game,c.player,c.host))}\n\n`);
       req.on('close',()=>clients.delete(c)); return;
     }
     if (req.method === 'POST' && url.pathname.startsWith('/api/')) {
@@ -63,4 +76,4 @@ const server = http.createServer(async (req,res) => {
 });
 setInterval(()=>{ for(const game of rooms.values()) if(game.phase==='question' && Date.now()>=game.deadline) {game.reveal(); broadcast(game);} },200).unref();
 setInterval(()=>{for(const c of clients)c.res.write(': heartbeat\n\n');},15000).unref();
-server.listen(Number(process.env.PORT || 3000),process.env.HOST || '0.0.0.0',()=>console.log(`Quiz server listening on port ${process.env.PORT || 3000}`));
+server.listen(Number(process.env.PORT || 3000),process.env.HOST || '0.0.0.0',()=>console.log(`Quiz server listening on port ${server.address().port}`));

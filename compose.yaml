@@ -3,6 +3,9 @@ services:
     build: .
     ports:
       - "0.0.0.0:80:3000"
+    environment:
+      PUBLIC_URL: "http://herp.derp/"
+      # PUBLIC_URL: ${PUBLIC_URL:-}
     volumes:
       - ./questions.yaml:/app/questions.yaml:ro
       - ./assets:/app/assets:ro

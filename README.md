@@ -17,6 +17,16 @@ No cloud services or accounts are required. Typography optionally loads from Goo
 
 ## Docker
 
+Set `PUBLIC_URL` to the address players use to reach the server, for example:
+
+```sh
+PUBLIC_URL=https://quiz.example.com npm start
+```
+
+When set, the big-screen lobby displays a QR code linking directly to `/play?code=ROOM_CODE`. Scanning it fills in the room code; players enter their nickname to join. The code disappears when the game starts. QR images are generated locally without an external service. Use an HTTP or HTTPS URL reachable from players' phones. The join link uses `/play` at that URL's origin, matching the app's routes. When unset, no QR code is displayed.
+
+For Docker Compose, set `PUBLIC_URL` in your shell or a `.env` file next to `compose.yaml`.
+
 ```sh
 docker compose up --build -d
 ```
