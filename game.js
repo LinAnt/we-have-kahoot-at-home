@@ -31,12 +31,18 @@ export class Game {
   constructor(questions, code = String(randomInt(100000,1000000))) {
     this.code = code; this.hostToken = token(); this.questions = questions;
     this.theme = 'default';
+    this.randomizeAnswers = true;
     this.players = new Map(); this.phase = 'lobby'; this.index = -1; this.deadline = null;
   }
   setTheme(theme) {
     if (!Object.hasOwn(themes, theme)) throw new Error('Choose a valid theme.');
     if (this.phase !== 'lobby') throw new Error('Choose a theme before starting the game.');
     this.theme = theme;
+  }
+  setRandomizeAnswers(enabled) {
+    if (typeof enabled !== 'boolean') throw new Error('Choose whether to randomize answer order.');
+    if (this.phase !== 'lobby') throw new Error('Choose the answer order before starting the game.');
+    this.randomizeAnswers = enabled;
   }
   join(name) {
     name = String(name || '').trim().slice(0,30);
@@ -54,7 +60,8 @@ export class Game {
     this.phase = 'question'; this.deadline = Date.now() + this.questions[this.index].duration * 1000;
     for (const p of this.players.values()) {
       p.answer = null; p.points = 0;
-      p.optionKeys = this.questions[this.index].options ? Object.keys(this.questions[this.index].options) : null;
+      const options = this.questions[this.index].options;
+      p.optionKeys = this.randomizeAnswers && options ? Object.keys(options) : null;
       // Shuffle once per player and round, so reconnects keep the same choices.
       if (p.optionKeys) for (let i = p.optionKeys.length - 1; i > 0; i--) {
         const j = randomInt(i + 1);
@@ -69,10 +76,12 @@ export class Game {
     if (p.answer !== null) throw new Error('You already answered.');
     const q = this.questions[this.index];
     value = String(value ?? '').trim().slice(0,500);
-    if (q.options) {
+    if (p.optionKeys) {
       const index = 'ABCDEFGH'.indexOf(value);
       if (value.length !== 1 || index < 0 || index >= p.optionKeys.length) throw new Error('Choose a valid answer.');
       value = p.optionKeys[index];
+    } else if (q.options && !Object.hasOwn(q.options, value)) {
+      throw new Error('Choose a valid answer.');
     }
     if (!value) throw new Error('Choose a valid answer.');
     p.answer = value;
@@ -94,6 +103,7 @@ export class Game {
     const options = q?.options && optionKeys
       ? Object.fromEntries(optionKeys.map((key, i) => ['ABCDEFGH'[i], q.options[key]])) : q?.options;
     return { code:this.code, theme:this.theme, phase:this.phase, index:this.index, total:this.questions.length, deadline:this.deadline,
+      ...(host ? {randomizeAnswers:this.randomizeAnswers} : {}),
       question: q ? {title:q.title,text:q.text,image:q.image,options,duration:q.duration,...(revealed || host ? {answer:displayAnswer(q.answer)} : {})} : null,
       answered:[...this.players.values()].filter(p=>p.answer !== null).length,
       players:[...this.players.values()].map(p=>({name:p.name,score:p.score})).sort((a,b)=>b.score-a.score),

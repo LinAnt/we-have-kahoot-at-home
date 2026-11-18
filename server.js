@@ -49,9 +49,10 @@ const server = http.createServer(async (req,res) => {
       let result = {};
       if(url.pathname === '/api/join') result = {playerToken:game.join(body.name)};
       else if(url.pathname === '/api/answer') game.answer(body.playerToken,body.answer);
-      else if(['/api/next','/api/reveal','/api/theme'].includes(url.pathname)) {
+      else if(['/api/next','/api/reveal','/api/theme','/api/answer-order'].includes(url.pathname)) {
         if(body.hostToken !== game.hostToken) return send(res,403,{error:'Host access required.'});
         if(url.pathname === '/api/theme') game.setTheme(body.theme);
+        else if(url.pathname === '/api/answer-order') game.setRandomizeAnswers(body.randomizeAnswers);
         else if(url.pathname === '/api/next') game.next(); else game.reveal();
       } else return send(res,404,{error:'Unknown action.'});
       broadcast(game); return send(res,200,result);

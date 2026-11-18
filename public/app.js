@@ -3,6 +3,7 @@ const app = document.querySelector('#app');
 const role = location.pathname.slice(1);
 const params = new URLSearchParams(location.search);
 let code = params.get('code') || '', state, stream;
+let savingAnswerOrder = false;
 let hostToken = sessionStorage.getItem(`host:${code}`) || '';
 let playerToken = localStorage.getItem(`player:${code}`) || '';
 const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -41,7 +42,7 @@ function render() {
   if(player && !state.me){stream.close();playerToken='';setup();return;}
   const q=state.question;
   let content='';
-  if(state.phase==='lobby') content=`<section class="lobby"><div class="eyebrow">${player?'YOU’RE ON THE LIST':'THE MORE, THE MERRIER'}</div><h1>${player?`Hey, ${esc(state.me.name)}.`:'Gather your crowd.'}</h1><p>${player?'Keep this screen open. Your host will start the game.':`Join at <strong>${esc(state.joinUrl ? new URL(state.joinUrl).host : location.host)}/play</strong>`}</p><div class="room-code"><small>ROOM CODE</small>${code}</div>${role==='screen' && state.joinUrl?`<a class="join-qr" href="${esc(state.joinUrl)}"><img src="/api/join-qr?code=${encodeURIComponent(code)}" alt="Scan to join room ${esc(code)}" width="280" height="280"><span>Scan to join the game</span></a>`:''}<div class="section-label">${state.players.length} PLAYER${state.players.length===1?'':'S'} IN THE ROOM <span class="pulse">●</span></div><div class="names">${state.players.map(p=>`<span>${esc(p.name)}</span>`).join('') || '<p>Waiting for the first player…</p>'}</div>${host?`${themePicker(state.theme)}<div class="host-actions"><button data-action="next" ${state.players.length?'':'disabled'}>Start game →</button><a class="secondary" href="/screen?code=${code}" target="_blank" rel="noopener">Open big screen ↗</a></div><p class="muted">${state.total} questions loaded · Everyone ready?</p>`:''}</section>`;
+  if(state.phase==='lobby') content=`<section class="lobby"><div class="eyebrow">${player?'YOU’RE ON THE LIST':'THE MORE, THE MERRIER'}</div><h1>${player?`Hey, ${esc(state.me.name)}.`:'Gather your crowd.'}</h1><p>${player?'Keep this screen open. Your host will start the game.':`Join at <strong>${esc(state.joinUrl ? new URL(state.joinUrl).host : location.host)}/play</strong>`}</p><div class="room-code"><small>ROOM CODE</small>${code}</div>${role==='screen' && state.joinUrl?`<a class="join-qr" href="${esc(state.joinUrl)}"><img src="/api/join-qr?code=${encodeURIComponent(code)}" alt="Scan to join room ${esc(code)}" width="280" height="280"><span>Scan to join the game</span></a>`:''}<div class="section-label">${state.players.length} PLAYER${state.players.length===1?'':'S'} IN THE ROOM <span class="pulse">●</span></div><div class="names">${state.players.map(p=>`<span>${esc(p.name)}</span>`).join('') || '<p>Waiting for the first player…</p>'}</div>${host?`${themePicker(state.theme)}<label class="answer-order"><input type="checkbox" id="randomize-answers" ${state.randomizeAnswers?'checked':''} ${savingAnswerOrder?'disabled':''}> Randomize answer order</label><div class="host-actions"><button data-action="next" ${state.players.length&&!savingAnswerOrder?'':'disabled'}>Start game →</button><a class="secondary" href="/screen?code=${code}" target="_blank" rel="noopener">Open big screen ↗</a></div><p class="muted">${state.total} questions loaded · Everyone ready?</p>`:''}</section>`;
   else if(state.phase==='finished') content=`<section class="lobby"><div class="eyebrow">THAT'S A WRAP</div><div class="trophy">✦</div><h1>${esc(state.players[0]?.name || 'Everyone')} wins!</h1><p>Good questions. Great company. One more round?</p>${ranking()}<a class="secondary" href="/">Back to home →</a></section>`;
   else {
     const reveal=state.phase==='reveal';
@@ -55,6 +56,20 @@ function render() {
     e.target.disabled = true;
     try { await api('theme', {theme:e.target.value}); }
     catch (err) { notice(err.message); render(); }
+  });
+  document.querySelector('#randomize-answers')?.addEventListener('change', async e => {
+    const randomizeAnswers = e.target.checked;
+    savingAnswerOrder = true;
+    e.target.disabled = true;
+    document.querySelector('[data-action="next"]').disabled = true;
+    try {
+      await api('answer-order', {randomizeAnswers});
+    } catch (err) {
+      notice(err.message);
+    } finally {
+      savingAnswerOrder = false;
+      render();
+    }
   });
   document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>api(b.dataset.action).catch(e=>notice(e.message)));
   document.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>submit(b.dataset.answer));

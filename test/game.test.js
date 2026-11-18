@@ -52,6 +52,29 @@ test('player choices stay stable and translate local letters for scoring and rev
  assert.notEqual(game.players.get(a).optionKeys,previous);
  assert.equal(game.state(a).me.submitted,false);
 });
+test('hosts can disable shuffling and keep the authored order and labels for every player',()=>{
+ const questions=readQuestions('- text: Pick one\n  options:\n    D: Yes\n    B: No\n  answer: D');
+ const game=new Game([...questions,...questions]);
+ assert.equal(game.state(null,true).randomizeAnswers,true);
+ assert.throws(()=>game.setRandomizeAnswers('false'),/whether/);
+ game.setRandomizeAnswers(false);
+ assert.equal(game.state(null,true).randomizeAnswers,false);
+ const a=game.join('Alice'), b=game.join('Bob');
+ game.next();
+ assert.throws(()=>game.setRandomizeAnswers(true),/before starting/);
+ for (const id of [a,b]) {
+  assert.deepEqual(Object.entries(game.state(id).question.options),[['D','Yes'],['B','No']]);
+  assert.equal(game.state(id).question.answer,undefined);
+ }
+ assert.throws(()=>game.answer(a,'A'),/valid/);
+ game.answer(a,'D');game.answer(b,'B');
+ assert.equal(game.state(a).question.answer,'D');
+ assert.equal(game.state(a).me.answer,'D');
+ assert.ok(game.state(a).me.points>=500);
+ assert.equal(game.state(b).me.points,0);
+ game.next();
+ assert.deepEqual(Object.keys(game.state(a).question.options),['D','B']);
+});
 test('invalid YAML and invalid options are rejected',()=>{
  for(const input of ['{}','[]','- text: Missing answer','- text: Invalid\n  answer: Z\n  options:\n    A: one\n    B: two','- text: Duration\n  answer: ok\n  duration: -1']) assert.throws(()=>readQuestions(input));
 });
